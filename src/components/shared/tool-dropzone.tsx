@@ -1,51 +1,65 @@
 "use client";
 
-import { useState, useCallback, useRef, type DragEvent } from "react";
+import { useState, useCallback, type DragEvent, useRef } from "react";
 import { Upload, File, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ToolDropzoneProps {
   onFile: (file: File) => void;
+  onFiles?: (files: File[]) => void;
   accept?: string;
   maxSize?: number; // in bytes
   label?: string;
+  multiple?: boolean;
 }
 
 export function ToolDropzone({
   onFile,
+  onFiles,
   accept,
   maxSize = 50 * 1024 * 1024, // 50MB default
   label,
+  multiple = false,
 }: ToolDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validateAndSet = useCallback(
-    (f: File) => {
+    (f: File | File[]) => {
       setError(null);
-      if (maxSize && f.size > maxSize) {
-        setError(`File too large. Max size is ${Math.round(maxSize / 1024 / 1024)}MB.`);
-        return;
-      }
-      if (accept) {
-        const types = accept.split(",").map((t) => t.trim());
-        const ext = f.name.split(".").pop()?.toLowerCase();
-        const matchesType = types.some(
-          (t) =>
-            f.type.match(t.replace("*", ".*")) ||
-            (ext && t.includes(ext)),
-        );
-        if (!matchesType) {
-          setError(`Invalid file type. Accepted: ${accept}`);
+      const fileArray = Array.isArray(f) ? f : [f];
+
+      for (const file of fileArray) {
+        if (maxSize && file.size > maxSize) {
+          setError(`File too large. Max size is ${Math.round(maxSize / 1024 / 1024)}MB.`);
           return;
         }
+        if (accept) {
+          const types = accept.split(",").map((t) => t.trim());
+          const ext = file.name.split(".").pop()?.toLowerCase();
+          const matchesType = types.some(
+            (t) =>
+              file.type.match(t.replace("*", ".*")) ||
+              (ext && t.includes(ext)),
+          );
+          if (!matchesType) {
+            setError(`Invalid file type. Accepted: ${accept}`);
+            return;
+          }
+        }
       }
-      setFile(f);
-      onFile(f);
+
+      if (multiple) {
+        setFiles((prev) => [...prev, ...fileArray]);
+        onFiles?.(fileArray);
+      } else {
+        setFiles(fileArray);
+        onFile(fileArray[0]);
+      }
     },
-    [accept, maxSize, onFile],
+    [accept, maxSize, onFile, onFiles, multiple],
   );
 
   const handleDrag = useCallback(
@@ -66,24 +80,38 @@ export function ToolDropzone({
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
-      const droppedFile = e.dataTransfer.files?.[0];
-      if (droppedFile) validateAndSet(droppedFile);
+      const droppedFiles = Array.from(e.dataTransfer?.files || []);
+      if (droppedFiles.length > 0) {
+        validateAndSet(multiple ? droppedFiles : droppedFiles[0]);
+      }
     },
-    [validateAndSet],
+    [validateAndSet, multiple],
   );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFile = e.target.files?.[0];
-      if (selectedFile) validateAndSet(selectedFile);
+      const selectedFiles = Array.from(e.target.files || []);
+      if (selectedFiles.length > 0) {
+        validateAndSet(multiple ? selectedFiles : selectedFiles[0]);
+      }
     },
-    [validateAndSet],
+    [validateAndSet, multiple],
   );
 
   const clear = useCallback(() => {
-    setFile(null);
+    setFiles([]);
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
+  }, []);
+
+  const removeFile = useCallback((index: number) => {
+    setFiles((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (updated.length === 0) {
+        setError(null);
+      }
+      return updated;
+    });
   }, []);
 
   return (
@@ -94,48 +122,24 @@ export function ToolDropzone({
         onDragOver={handleDrag}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`relative cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
+        className={`relative cursor-pointer border-2 border-dashed border-foreground p-8 text-center bg-background shadow-[4px_4px_0px_0px] shadow-foreground transition-all duration-100 ${
           isDragging
-            ? "border-indigo-500 bg-indigo-500/5"
-            : "border-border hover:border-muted-foreground/30"
+            ? "bg-primary border-solid border-foreground translate-x-[2px] translate-y-[2px] shadow-none"
+            : ""
         }`}
       >
         <input
           ref={inputRef}
           type="file"
           accept={accept}
+          multiple={multiple}
           onChange={handleChange}
           className="hidden"
           aria-label={label || "Upload file"}
         />
 
         <AnimatePresence mode="wait">
-          {file ? (
-            <motion.div
-              key="file"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="flex items-center justify-center gap-3"
-            >
-              <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted">
-                <File className="h-5 w-5 text-indigo-500" />
-                <span className="text-sm font-medium truncate max-w-[200px]">
-                  {file.name}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    clear();
-                  }}
-                  className="p-0.5 rounded-full hover:bg-muted-foreground/20 transition-colors"
-                  aria-label="Remove file"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </motion.div>
-          ) : (
+          {files.length === 0 ? (
             <motion.div
               key="upload"
               initial={{ opacity: 0 }}
@@ -143,12 +147,12 @@ export function ToolDropzone({
               exit={{ opacity: 0 }}
               className="flex flex-col items-center gap-3"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
-                <Upload className="h-6 w-6 text-indigo-500" />
+              <div className="flex h-12 w-12 items-center justify-center border-2 border-foreground bg-background">
+                <Upload className="h-6 w-6 text-foreground" />
               </div>
               <div>
-                <p className="text-sm font-medium">
-                  {label || "Drop a file here or click to browse"}
+                <p className="text-sm font-bold">
+                  {label || "Drop your file here or click to browse"}
                 </p>
                 {accept && (
                   <p className="text-xs text-muted-foreground mt-1">
@@ -157,12 +161,47 @@ export function ToolDropzone({
                 )}
               </div>
             </motion.div>
+          ) : (
+            <motion.div
+              key="files"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="space-y-2"
+            >
+              {files.map((file, index) => (
+                <div
+                  key={`${file.name}-${index}`}
+                  className="flex items-center justify-between gap-3 px-4 py-2 border-2 border-foreground bg-muted"
+                >
+                  <div className="flex items-center gap-2">
+                    <File className="h-5 w-5 text-foreground" />
+                    <span className="text-sm font-bold truncate max-w-[200px]">
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({(file.size / 1024).toFixed(1)} KB)
+                    </span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(index);
+                    }}
+                    className="p-0.5 border-2 border-foreground hover:bg-foreground hover:text-background transition-colors"
+                    aria-label="Remove file"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       {error && (
-        <p className="text-sm text-destructive text-center">{error}</p>
+        <p className="text-sm text-destructive font-bold text-center">{error}</p>
       )}
     </div>
   );

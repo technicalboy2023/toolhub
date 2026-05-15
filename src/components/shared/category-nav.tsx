@@ -1,52 +1,62 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { Heart } from "lucide-react";
 import { categories } from "@/features/tools/categories";
 import type { CategorySlug } from "@/types";
+import { useUIStore } from "@/store/ui-store";
 
 interface CategoryNavProps {
-  selected?: CategorySlug | "all";
-  onSelect: (slug: CategorySlug | "all") => void;
+  selected?: CategorySlug | "all" | "favorites";
+  onSelect: (slug: CategorySlug | "all" | "favorites") => void;
 }
 
 export function CategoryNav({ selected = "all", onSelect }: CategoryNavProps) {
+  const { favorites } = useUIStore();
+
   return (
     <div className="flex flex-wrap gap-2">
+      {/* All button */}
       <button
         onClick={() => onSelect("all")}
-        className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+        className={`relative px-4 py-2 border-2 font-bold text-sm transition-all duration-100 ${
           selected === "all"
-            ? "text-white"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            ? "bg-primary text-foreground border-foreground shadow-[3px_3px_0px_0px] shadow-foreground"
+            : "bg-background text-foreground border-foreground hover:bg-primary hover:shadow-[3px_3px_0px_0px] hover:shadow-foreground"
         }`}
       >
-        {selected === "all" && (
-          <motion.div
-            layoutId="category-pill"
-            className="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600"
-          />
-        )}
-        <span className="relative z-10">All</span>
+        All
       </button>
+
+      {/* Favorites button */}
+      <button
+        onClick={() => onSelect("favorites")}
+        className={`relative px-4 py-2 border-2 font-bold text-sm transition-all duration-100 flex items-center gap-2 ${
+          selected === "favorites"
+            ? "bg-primary text-foreground border-foreground shadow-[3px_3px_0px_0px] shadow-foreground"
+            : "bg-background text-foreground border-foreground hover:bg-primary hover:shadow-[3px_3px_0px_0px] hover:shadow-foreground"
+        }`}
+      >
+        <Heart className="h-4 w-4" />
+        <span>Favorites</span>
+        {favorites.length > 0 && (
+          <span className="text-xs">({favorites.length})</span>
+        )}
+      </button>
+
+      {/* Category buttons */}
       {categories.map((cat) => (
         <button
           key={cat.slug}
           onClick={() => onSelect(cat.slug)}
-          className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+          className={`relative px-4 py-2 border-2 font-bold text-sm transition-all duration-100 flex items-center gap-2 ${
             selected === cat.slug
-              ? "text-white"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              ? "bg-primary text-foreground border-foreground shadow-[3px_3px_0px_0px] shadow-foreground"
+              : "bg-background text-foreground border-foreground hover:bg-primary hover:shadow-[3px_3px_0px_0px] hover:shadow-foreground"
           }`}
         >
-          {selected === cat.slug && (
-            <motion.div
-              layoutId="category-pill"
-              className="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600"
-            />
-          )}
-          <cat.icon className="h-4 w-4 relative z-10" />
-          <span className="relative z-10">{cat.name}</span>
+          <cat.icon className="h-4 w-4" />
+          <span>{cat.name}</span>
         </button>
       ))}
     </div>

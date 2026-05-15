@@ -52,6 +52,9 @@ const toolComponents: Record<string, () => Promise<{ default: React.ComponentTyp
   "xml-formatter": () => import("@/features/tools/xml-formatter/components/tool"),
   "yaml-converter": () => import("@/features/tools/yaml-converter/components/tool"),
   "barcode-generator": () => import("@/features/tools/barcode-generator/components/tool"),
+  "html-formatter": () => import("@/features/tools/html-formatter/components/tool"),
+  "markdown-converter": () => import("@/features/tools/markdown-converter/components/tool"),
+  "hash-generator": () => import("@/features/tools/hash-generator/components/tool"),
   "qr-scanner": () => import("@/features/tools/qr-scanner/components/tool"),
   "image-compressor": () => import("@/features/tools/image-compressor/components/tool"),
   "resize-image": () => import("@/features/tools/resize-image/components/tool"),
@@ -92,7 +95,8 @@ export default async function ToolPage({ params }: ToolPageProps) {
       icon={tool.icon}
       title={tool.name}
       description={tool.description}
-      gradient={gradient}
+      flatColor={gradient}
+      category={tool.category}
     >
       {DynamicTool ? <DynamicTool /> : (
         <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -35,6 +35,11 @@ function pickColor(category: CategorySlug): string {
 }
 
 export const tools: ToolConfig[] = [
+  // Utility Tools
+  { slug: "html-formatter", name: "HTML Formatter", description: "Format and minify HTML code", icon: Wrench, category: "utility", color: pickColor("utility") },
+  { slug: "markdown-converter", name: "Markdown Converter", description: "Convert between Markdown and HTML", icon: Wrench, category: "utility", color: pickColor("utility") },
+  { slug: "hash-generator", name: "Hash Generator", description: "Generate MD5, SHA-1, SHA-256, and SHA-512 hashes", icon: Wrench, category: "utility", color: pickColor("utility") },
+
   // Image Tools
   { slug: "image-compressor", name: "Image Compressor", description: "Reduce image file size without losing quality", icon: Image, category: "image", color: pickColor("image"), isPopular: true },
   { slug: "resize-image", name: "Resize Image", description: "Change image dimensions to any size", icon: Image, category: "image", color: pickColor("image"), isPopular: true },

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Heart } from "lucide-react";
 import type { ToolConfig } from "@/features/tools/registry";
-import { Badge } from "@/components/ui/badge";
+import { useUIStore } from "@/store/ui-store";
 
 interface ToolCardProps {
   tool: ToolConfig;
@@ -13,6 +13,14 @@ interface ToolCardProps {
 
 export function ToolCard({ tool, index = 0 }: ToolCardProps) {
   const Icon = tool.icon;
+  const { favorites, toggleFavorite, isFavorite } = useUIStore();
+  const isFav = isFavorite(tool.slug);
+
+  const handleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(tool.slug);
+  };
 
   return (
     <motion.div
@@ -22,31 +30,42 @@ export function ToolCard({ tool, index = 0 }: ToolCardProps) {
     >
       <Link
         href={`/tools/${tool.slug}`}
-        className="group relative flex flex-col gap-3 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-sm p-5 transition-all duration-300 hover-lift hover:border-indigo-500/30 dark:hover:border-indigo-400/20"
+        className="group relative flex flex-col gap-3 p-5 card-bold cursor-pointer hover:shadow-[6px_6px_0px_0px] transition-all duration-100"
       >
-        {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/[0.03] to-purple-500/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {/* Heart/favorite button */}
+        <button
+          onClick={handleFavorite}
+          className="absolute top-3 right-3 z-10 p-1 hover:scale-110 transition-transform"
+          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Heart
+            className={`h-5 w-5 transition-colors ${
+              isFav ? "fill-red-500 text-red-500" : "text-foreground"
+            }`}
+          />
+        </button>
 
         {/* Icon */}
         <div
-          className={`relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${tool.color} shadow-lg`}
+          className="flex h-10 w-10 items-center justify-center border-2 border-foreground"
+          style={{ backgroundColor: getCategoryColor(tool.category) }}
         >
           <Icon className="h-5 w-5 text-white" />
         </div>
 
         {/* Content */}
-        <div className="relative space-y-1.5">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold tracking-tight">{tool.name}</h3>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-bold tracking-tight">{tool.name}</h3>
             {tool.isNew && (
-              <Badge variant="default" className="h-5 px-1.5 text-[10px] bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border-0">
+              <span className="text-[10px] font-bold bg-primary text-foreground px-1 py-0.5">
                 NEW
-              </Badge>
+              </span>
             )}
             {tool.isPopular && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 border-0">
+              <span className="text-[10px] font-bold bg-foreground text-background px-1 py-0.5">
                 POPULAR
-              </Badge>
+              </span>
             )}
           </div>
           <p className="text-sm text-muted-foreground line-clamp-2">
@@ -55,11 +74,24 @@ export function ToolCard({ tool, index = 0 }: ToolCardProps) {
         </div>
 
         {/* Arrow */}
-        <div className="relative mt-auto flex items-center gap-1 text-xs font-medium text-indigo-500 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-x-[-4px] group-hover:translate-x-0 transition-transform">
+        <div className="flex items-center gap-1 text-xs font-bold mt-auto">
           Open tool
           <ArrowRight className="h-3 w-3" />
         </div>
       </Link>
     </motion.div>
   );
+}
+
+function getCategoryColor(category: string): string {
+  const colors: Record<string, string> = {
+    image: "#3B82F6",
+    pdf: "#EF4444",
+    qr: "#06B6D4",
+    text: "#10B981",
+    data: "#8B5CF6",
+    utility: "#F59E0B",
+    "audio-video": "#6366F1",
+  };
+  return colors[category] || "#6366F1";
 }

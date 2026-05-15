@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -7,6 +8,8 @@ import {
   History,
   TrendingUp,
   Star,
+  Shield,
+  Heart,
 } from "lucide-react";
 import Link from "next/link";
 import { SearchBar } from "@/components/shared/search-bar";
@@ -21,28 +24,46 @@ import {
 import { useUIStore } from "@/store/ui-store";
 import { Badge } from "@/components/ui/badge";
 import { getToolsByCategory, getToolBySlug } from "@/features/tools/registry";
+import type { RecentlyUsedTool } from "@/types";
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0 },
 };
 
+const stats = [
+  { value: "37+", label: "TOTAL TOOLS" },
+  { value: "7", label: "CATEGORIES" },
+  { value: "0", label: "SERVER UPLOADS" },
+  { value: "100%", label: "FREE FOREVER" },
+];
+
+const categoryColors: Record<string, string> = {
+  image: "#3B82F6",
+  pdf: "#EF4444",
+  qr: "#06B6D4",
+  text: "#10B981",
+  data: "#8B5CF6",
+  utility: "#F59E0B",
+  "audio-video": "#6366F1",
+};
+
 export default function HomePage() {
-  const { recentlyUsed } = useUIStore();
+  const { recentlyUsed, favorites } = useUIStore();
 
   const recentTools = recentlyUsed
-    .map((r) => getToolBySlug(r.slug))
+    .map((r: RecentlyUsedTool) => getToolBySlug(r.slug))
+    .filter(Boolean);
+
+  const favoriteTools = favorites
+    .map((slug: string) => getToolBySlug(slug))
     .filter(Boolean);
 
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative overflow-hidden border-b border-border/40">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/[0.03] via-purple-500/[0.02] to-transparent dark:from-indigo-500/[0.05] dark:via-purple-500/[0.03]" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-full blur-3xl" />
-
-        <div className="container mx-auto px-4 py-20 md:py-28 relative">
+      <section className="border-b-2 border-foreground bg-background">
+        <div className="container mx-auto px-4 py-16 md:py-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -56,7 +77,7 @@ export default function HomePage() {
             >
               <Badge
                 variant="secondary"
-                className="px-3 py-1.5 gap-1.5 text-xs bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border-indigo-500/20"
+                className="px-3 py-1.5 gap-1.5 text-xs bg-primary text-foreground border-2 border-foreground font-bold"
               >
                 <Sparkles className="h-3 w-3" />
                 40+ Free Browser Tools
@@ -68,11 +89,11 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight"
+              className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter leading-tight"
             >
               Everything you need.
               <br />
-              <span className="gradient-text">Nothing leaves your device.</span>
+              <span className="bg-primary text-foreground px-2">Nothing leaves your device.</span>
             </motion.h1>
 
             {/* Subtitle */}
@@ -80,7 +101,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-lg text-muted-foreground max-w-xl"
+              className="text-lg max-w-xl font-medium text-muted-foreground"
             >
               Process images, PDFs, text, and more — all inside your browser.
               Fast, private, and completely free.
@@ -103,18 +124,39 @@ export default function HomePage() {
               transition={{ delay: 0.35 }}
               className="flex flex-wrap items-center justify-center gap-2 mt-2"
             >
-              <span className="text-xs text-muted-foreground">Popular:</span>
+              <span className="text-xs font-bold">Popular:</span>
               {popularTools.slice(0, 4).map((tool) => (
                 <Link
                   key={tool.slug}
                   href={`/tools/${tool.slug}`}
-                  className="text-xs px-2.5 py-1 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs px-2.5 py-1 border-2 border-foreground font-bold hover:bg-primary hover:text-foreground transition-colors"
                 >
                   {tool.name}
                 </Link>
               ))}
             </motion.div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Stats Strip */}
+      <section className="border-y-2 border-foreground bg-primary">
+        <div className="container mx-auto px-4 py-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {stats.map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.05 }}
+              className="text-center"
+            >
+              <div className="text-2xl font-black">{stat.value}</div>
+              <div className="text-xs font-bold uppercase tracking-wider">
+                {stat.label}
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 
@@ -130,15 +172,40 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10">
-                <History className="h-4 w-4 text-indigo-500" />
+              <div className="flex h-8 w-8 items-center justify-center border-2 border-foreground bg-background">
+                <History className="h-4 w-4 text-foreground" />
               </div>
-              <h2 className="text-xl font-semibold tracking-tight">
+              <h2 className="text-xl font-bold tracking-tight section-heading">
                 Recently Used
               </h2>
             </div>
             <ToolGrid columns={3}>
               {recentTools.slice(0, 6).map((tool: any, i: number) => (
+                <ToolCard key={tool.slug} tool={tool} index={i} />
+              ))}
+            </ToolGrid>
+          </motion.section>
+        )}
+
+        {/* Favorites */}
+        {favoriteTools.length > 0 && (
+          <motion.section
+            variants={sectionVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex h-8 w-8 items-center justify-center border-2 border-foreground bg-primary">
+                <Heart className="h-4 w-4 text-foreground" />
+              </div>
+              <h2 className="text-xl font-bold tracking-tight section-heading">
+                Favorites
+              </h2>
+            </div>
+            <ToolGrid columns={3}>
+              {favoriteTools.map((tool: any, i: number) => (
                 <ToolCard key={tool.slug} tool={tool} index={i} />
               ))}
             </ToolGrid>
@@ -155,16 +222,16 @@ export default function HomePage() {
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
-                <Star className="h-4 w-4 text-amber-500" />
+              <div className="flex h-8 w-8 items-center justify-center border-2 border-foreground bg-background">
+                <Star className="h-4 w-4 text-foreground" />
               </div>
-              <h2 className="text-xl font-semibold tracking-tight">
+              <h2 className="text-xl font-bold tracking-tight section-heading">
                 Featured Tools
               </h2>
             </div>
             <Link
               href="/tools"
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors font-bold"
             >
               View all
               <ArrowRight className="h-3.5 w-3.5" />
@@ -177,7 +244,7 @@ export default function HomePage() {
           </ToolGrid>
         </motion.section>
 
-        {/* Categories */}
+        {/* Browse by Category */}
         <motion.section
           variants={sectionVariants}
           initial="hidden"
@@ -186,10 +253,10 @@ export default function HomePage() {
           transition={{ duration: 0.5 }}
         >
           <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10">
-              <TrendingUp className="h-4 w-4 text-purple-500" />
+            <div className="flex h-8 w-8 items-center justify-center border-2 border-foreground bg-background">
+              <TrendingUp className="h-4 w-4 text-foreground" />
             </div>
-            <h2 className="text-xl font-semibold tracking-tight">
+            <h2 className="text-xl font-bold tracking-tight section-heading">
               Browse by Category
             </h2>
           </div>
@@ -208,15 +275,16 @@ export default function HomePage() {
                 >
                   <Link
                     href={`/tools?category=${category.slug}`}
-                    className="group relative flex items-start gap-4 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-sm p-5 transition-all duration-300 hover-lift"
+                    className="group relative flex items-start gap-4 p-5 card-bold hover:shadow-[6px_6px_0px_0px] transition-all duration-100"
                   >
                     <div
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${category.color} shadow-lg`}
+                      className="flex h-12 w-12 items-center justify-center border-2 border-foreground shrink-0"
+                      style={{ backgroundColor: categoryColors[category.slug] }}
                     >
                       <Icon className="h-6 w-6 text-white" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-semibold tracking-tight group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">
+                      <h3 className="font-black uppercase tracking-wider text-foreground">
                         {category.name}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
@@ -240,31 +308,28 @@ export default function HomePage() {
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/[0.05] via-purple-500/[0.05] to-pink-500/[0.05] p-8 md:p-12 text-center"
+          className="border-2 border-foreground bg-foreground text-background p-8 md:p-12 text-center"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
-          <div className="relative">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
-              Private by Design
-            </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto mb-6">
-              Unlike other online tool platforms, ToolsHub processes everything
-              directly in your browser. Your files never touch a server — they
-              stay on your device, where they belong.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                No file uploads
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                No tracking
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                100% free
-              </div>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-3 section-heading">
+            Private by Design
+          </h2>
+          <p className="text-background/80 max-w-lg mx-auto mb-6">
+            Unlike other online tool platforms, ToolsHub processes everything
+            directly in your browser. Your files never touch a server — they
+            stay on your device, where they belong.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-bold">
+            <div className="flex items-center gap-2 border-2 border-background px-4 py-2 text-primary">
+              <div className="h-2 w-2 rounded-full bg-primary" />
+              No file uploads
+            </div>
+            <div className="flex items-center gap-2 border-2 border-background px-4 py-2 text-primary">
+              <div className="h-2 w-2 rounded-full bg-primary" />
+              No tracking
+            </div>
+            <div className="flex items-center gap-2 border-2 border-background px-4 py-2 text-primary">
+              <div className="h-2 w-2 rounded-full bg-primary" />
+              100% free
             </div>
           </div>
         </motion.section>
