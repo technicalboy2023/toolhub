@@ -5,36 +5,33 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Copy, FileText, Code } from "lucide-react";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 export default function MarkdownConverterTool() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [conversionMode, setConversionMode] = useState("md-to-html");
+  const [activeTab, setActiveTab] = useState<"write" | "preview" | "html">("write");
 
-  const markdownToHTML = () => {
+  const markdownToHTML = async () => {
     if (!input.trim()) return;
 
-    // Simple Markdown to HTML conversion
-    let html = input
-      .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-      .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-      .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-      .replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
-      .replace(/\*(.*)\*/gim, "<em>$1</em>")
-      .replace(/`([^`]+)`/gim, "<code>$1</code>")
-      .replace(/\n\n/gim, "</p><p>")
-      .replace(/^(.*)$/gim, "<p>$1</p>")
-      .replace(/<p><\/p>/gim, "")
-      .replace(/<p>(<h[1-6]>)/gim, "$1")
-      .replace(/(<\/h[1-6]>)<\/p>/gim, "$1");
-
-    setOutput(html);
+    try {
+      // Use marked for markdown to HTML conversion
+      const html = await marked.parse(input);
+      // Sanitize HTML to prevent XSS
+      const sanitizedHtml = DOMPurify.sanitize(html);
+      setOutput(sanitizedHtml);
+    } catch (error) {
+      console.error("Markdown conversion error:", error);
+      setOutput("Error converting markdown");
+    }
   };
 
   const htmlToMarkdown = () => {
     if (!input.trim()) return;
-
-    // Simple HTML to Markdown conversion
+    // Simple regex-based HTML to markdown (marked doesn't support reverse conversion)
     let markdown = input
       .replace(/<h1>(.*?)<\/h1>/gim, "# $1\n")
       .replace(/<h2>(.*?)<\/h2>/gim, "## $1\n")
@@ -90,31 +87,65 @@ export default function MarkdownConverterTool() {
         </Select>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-bold">
-            {conversionMode === "md-to-html" ? "Markdown Input" : "HTML Input"}
-          </label>
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={conversionMode === "md-to-html"
-              ? "# Hello World\n\nThis is **bold** and *italic*."
-              : "<h1>Hello World</h1>\n<p>This is <strong>bold</strong> and <em>italic</em>.</p>"
-            }
-            className="min-h-[200px] font-mono text-sm"
-          />
+      <div className="space-y-4">
+        <div className="flex gap-4">
+          <Button
+            onClick={() => setActiveTab("write")}
+            className={`${activeTab === "write" ? "btn-primary" : "btn-secondary"} gap-2`}
+          >
+            Write
+          </Button>
+          <Button
+            onClick={() => setActiveTab("preview")}
+            className={`${activeTab === "preview" ? "btn-primary" : "btn-secondary"} gap-2`}
+          >
+            Preview
+          </Button>
+          <Button
+            onClick={() => setActiveTab("html")}
+            className={`${activeTab === "html" ? "btn-primary" : "btn-secondary"} gap-2`}
+          >
+            HTML Output
+          </Button>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-bold">
-            {conversionMode === "md-to-html" ? "HTML Output" : "Markdown Output"}
-          </label>
-          <Textarea
-            value={output}
-            readOnly
-            className="min-h-[200px] font-mono text-sm bg-muted"
-          />
-        </div>
+
+        {activeTab === "write" && (
+          <div className="space-y-2">
+            <label className="text-sm font-bold">
+              {conversionMode === "md-to-html" ? "Markdown Input" : "HTML Input"}
+            </label>
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={conversionMode === "md-to-html"
+                ? "# Hello World\n\nThis is **bold** and *italic*."
+                : "<h1>Hello World</h1>\n<p>This is <strong>bold</strong> and <em>italic</em>.</p>"
+              }
+              className="min-h-[200px] font-mono text-sm"
+            />
+          </div>
+        )}
+
+        {activeTab === "preview" && (
+          <div className="space-y-2">
+            <label className="text-sm font-bold">Preview</label>
+            <div
+              className="prose prose-sm max-w-none min-h-[200px] bg-muted p-4 rounded"
+              dangerouslySetInnerHTML={{ __html: output }}
+            />
+          </div>
+        )}
+
+        {activeTab === "html" && (
+          <div className="space-y-2">
+            <label className="text-sm font-bold">HTML Output</label>
+            <Textarea
+              value={output}
+              readOnly
+              className="min-h-[200px] font-mono text-sm bg-muted"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3">

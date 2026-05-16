@@ -12,27 +12,97 @@ export default function HTMLFormatterTool() {
   const [indentSize, setIndentSize] = useState("2");
   const [useTabs, setUseTabs] = useState(false);
 
-  const formatHTML = () => {
-    if (!input.trim()) return;
+  const formatHTML = (input: string, indentSize: number, useTabs: boolean): string => {
+    if (!input.trim()) return "";
 
-    try {
-      // Simple HTML formatter using DOMParser
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(input, "text/html");
-      const formatted = new XMLSerializer().serializeToString(doc);
-      setOutput(formatted);
-    } catch (error) {
-      // Fallback to basic formatting
-      let formatted = input
-        .replace(/></g, ">\n<")
-        .split("\n")
-        .map((line, index, arr) => {
-          const indent = "  ".repeat(Math.max(0, arr.length - index - 1));
-          return indent + line.trim();
-        })
-        .join("\n");
-      setOutput(formatted);
+    const indentChar = useTabs ? "\t" : " ".repeat(indentSize);
+    const inlineTags = new Set([
+      "span",
+      "a",
+      "strong",
+      "em",
+      "b",
+      "i",
+      "u",
+      "code",
+      "small",
+      "abbr",
+      "cite",
+      "dfn",
+      "kbd",
+      "s",
+      "samp",
+      "time",
+      "var",
+    ]);
+    const voidTags = new Set([
+      "area",
+      "base",
+      "br",
+      "col",
+      "embed",
+      "hr",
+      "img",
+      "input",
+      "link",
+      "meta",
+      "param",
+      "source",
+      "track",
+      "wbr",
+    ]);
+
+    let result = "";
+    let indentLevel = 0;
+    let lastWasInline = false;
+    let i = 0;
+
+    while (i < input.length) {
+      if (input[i] === "<") {
+        // Found a tag
+        const tagEnd = input.indexOf(">", i);
+        if (tagEnd === -1) {
+          // No closing >, treat as plain text
+          result += input[i];
+          i++;
+          continue;
+        }
+
+        const tagContent = input.substring(i + 1, tagEnd).trim();
+        const isClosing = tagContent.startsWith("/");
+        const tagName = isClosing
+          ? tagContent.substring(1).split(/\s+/)[0]
+          : tagContent.split(/\s+/)[0];
+        const isSelfClosing =
+          !isClosing && tagContent.endsWith("/") || voidTags.has(tagName);
+
+        // Add newline before tag if not inline and not first tag
+        if (!lastWasInline && result.length > 0 && !isClosing) {
+          result += "\n" + indentChar.repeat(indentLevel);
+        }
+
+        // Add the tag
+        result += input.substring(i, tagEnd + 1);
+
+        // Update indent level
+        if (isClosing && !isSelfClosing) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        } else if (!isClosing && !isSelfClosing) {
+          indentLevel++;
+        }
+
+        // If self-closing or inline, don't increase indent for next line
+        lastWasInline = isSelfClosing || inlineTags.has(tagName);
+
+        i = tagEnd + 1;
+      } else {
+        // Plain text
+        result += input[i];
+        i++;
+      }
     }
+
+    return result;
   };
 
   const minifyHTML = () => {
@@ -83,7 +153,10 @@ export default function HTMLFormatterTool() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button onClick={formatHTML} className="gap-2">
+        <Button onClick={() => {
+          const size = parseInt(indentSize);
+          setOutput(formatHTML(input, size, useTabs));
+        }} className="gap-2">
           <FileCode className="h-4 w-4" />
           Format HTML
         </Button>

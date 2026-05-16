@@ -11,33 +11,26 @@ export default function AudioConverterTool() {
   const [file, setFile] = useState<File | null>(null);
   const [format, setFormat] = useState("audio/mp3");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
-  const [processing, setProcessing] = useState(false);
 
   const handleFile = (f: File) => {
     setFile(f);
     setResultUrl(null);
   };
 
-  const convert = async () => {
+  const renameFile = async () => {
     if (!file) return;
-    setProcessing(true);
-    try {
-      // Audio conversion requires ffmpeg.wasm. For now, provide the original file.
-      toast.info(`Full audio conversion requires ffmpeg.wasm. The original file will be downloaded.`);
-      setResultUrl(URL.createObjectURL(file));
-      setProcessing(false);
-    } catch {
-      toast.error("Failed to convert audio");
-      setProcessing(false);
-    }
+    const ext = format === "audio/mp3" ? "mp3" : format === "audio/wav" ? "wav" : "ogg";
+    const newFile = new File([file], `renamed.${ext}`, { type: format });
+    setResultUrl(URL.createObjectURL(newFile));
+    toast.success("File renamed successfully!");
   };
 
-  const handleDownload = () => {
+  const download = () => {
     if (!resultUrl || !file) return;
     const a = document.createElement("a");
     a.href = resultUrl;
     const ext = format === "audio/mp3" ? "mp3" : format === "audio/wav" ? "wav" : "ogg";
-    a.download = `converted-${file.name.replace(/\.[^.]+$/, "")}.${ext}`;
+    a.download = `renamed.${ext}`;
     a.click();
   };
 
@@ -47,6 +40,21 @@ export default function AudioConverterTool() {
         <ToolDropzone onFile={handleFile} accept="audio/*" />
       ) : (
         <div className="space-y-4">
+          <div className="card-bold p-4 bg-yellow-50 border-yellow-200 text-yellow-800 space-y-2">
+            <p className="text-sm font-bold flex items-center gap-2">
+              ⚠️ Browser-based audio conversion limits
+            </p>
+            <p className="text-xs">
+              Full audio conversion requires WebAssembly (ffmpeg.wasm) which is 30MB+ and slow to load.
+              We recommend these free alternatives for real conversion:
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <a href="https://ffmpeg.guide" target="_blank" className="text-xs underline font-medium">FFmpeg.guide (Desktop)</a>
+              <a href="https://cloudconvert.com" target="_blank" className="text-xs underline font-medium">CloudConvert.com</a>
+              <a href="https://convertio.co" target="_blank" className="text-xs underline font-medium">Convertio.co</a>
+            </div>
+          </div>
+
           <p className="text-sm text-muted-foreground">Selected: {file.name}</p>
           <Select value={format} onValueChange={(v) => v && setFormat(v)}>
             <SelectTrigger>
@@ -59,13 +67,13 @@ export default function AudioConverterTool() {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Note: Full audio conversion requires ffmpeg.wasm. Basic mode provides file rename.
+            Note: This tool only renames the file extension.
           </p>
           <div className="flex gap-2">
-            <Button onClick={convert} disabled={processing} className="flex-1">
-              {processing ? "Converting..." : "Convert"}
+            <Button onClick={renameFile} className="flex-1 btn-primary">
+              Rename File
             </Button>
-            <Button onClick={handleDownload} disabled={!resultUrl} variant="outline" className="gap-2">
+            <Button onClick={download} disabled={!resultUrl} variant="outline" className="gap-2 btn-secondary">
               <Download className="h-4 w-4" />
               Download
             </Button>
