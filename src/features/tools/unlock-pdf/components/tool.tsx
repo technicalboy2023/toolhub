@@ -62,6 +62,14 @@ export default function UnlockPdfTool() {
             Note: This tool can only remove passwords from PDFs where the password is known or where the
             PDF has owner-level protection without encryption.
           </p>
+
+          <div className="card-bold p-4 mb-4 bg-yellow-50 border-yellow-200">
+            <p className="text-sm">
+              This tool can remove owner-level restrictions (print/copy locks).
+              It cannot decrypt password-protected PDFs without the correct password.
+            </p>
+          </div>
+
           <div className="flex gap-2">
             <Button onClick={unlock} disabled={processing} className="flex-1">
               {processing ? "Unlocking..." : "Unlock PDF"}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { ResultPreview } from "@/components/shared/result-preview";
 
@@ -8,18 +8,38 @@ export default function TimestampConverterTool() {
   const [timestamp, setTimestamp] = useState("");
   const [dateInput, setDateInput] = useState("");
 
-  const timestampResult = (() => {
+  // Auto-update current Unix time every second
+  useMemo(() => {
+    const interval = setInterval(() => {
+      // Don't update if user is typing
+      if (document.activeElement !== document.getElementById("timestamp-input")) {
+        setTimestamp(Date.now().toString());
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const timestampResult = useMemo(() => {
     const ts = Number(timestamp);
     if (!timestamp.trim() || isNaN(ts)) return null;
 
-    const seconds = ts > 1e12 ? Math.floor(ts / 1000) : ts;
+    // Auto-detect if input is seconds vs milliseconds (if > 1e10, it's ms)
+    const seconds = ts > 1e10 ? Math.floor(ts / 1000) : ts;
     const date = new Date(seconds * 1000);
 
     if (date.toString() === "Invalid Date") return null;
 
+    // Calculate relative time
+    const now = Date.now();
+    const diffSeconds = Math.floor((date.getTime() - now) / 1000);
+    const relativeTime = getRelativeTime(diffSeconds);
+
     return {
       utc: date.toUTCString(),
-      local: date.toLocaleString(),
+      // Show in multiple timezones: UTC, IST (Asia/Kolkata), US/Eastern, US/Pacific
+      ist: new Date(seconds * 1000).toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+      eastern: new Date(seconds * 1000).toLocaleString("en-US", { timeZone: "America/New_York" }),
+      pacific: new Date(seconds * 1000).toLocaleString("en-US", { timeZone: "America/Los_Angeles" }),
       iso: date.toISOString(),
       unixSeconds: Math.floor(date.getTime() / 1000),
       unixMs: date.getTime(),
@@ -27,10 +47,11 @@ export default function TimestampConverterTool() {
       month: date.toLocaleString("en", { month: "long" }),
       day: date.getDate(),
       weekday: date.toLocaleString("en", { weekday: "long" }),
+      relativeTime, // "3 days ago", "2 hours from now", etc.
     };
-  })();
+  }, [timestamp]);
 
-  const dateResult = (() => {
+  const dateResult = useMemo(() => {
     if (!dateInput.trim()) return null;
     const date = new Date(dateInput);
     if (date.toString() === "Invalid Date") return null;
@@ -41,7 +62,34 @@ export default function TimestampConverterTool() {
       iso: date.toISOString(),
       utc: date.toUTCString(),
     };
-  })();
+  }, [dateInput]);
+
+  // Helper function to get relative time string
+  function getRelativeTime(diffSeconds: number): string {
+    const absSeconds = Math.abs(diffSeconds);
+    const isFuture = diffSeconds > 0;
+
+    if (absSeconds < 5) {
+      return isFuture ? "just now" : "just now";
+    } else if (absSeconds < 60) {
+      return isFuture ? `in ${absSeconds} seconds` : `${absSeconds} seconds ago`;
+    } else if (absSeconds < 3600) {
+      const minutes = Math.floor(absSeconds / 60);
+      return isFuture ? `in ${minutes} minute${minutes !== 1 ? 's' : ''}` : `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    } else if (absSeconds < 86400) {
+      const hours = Math.floor(absSeconds / 3600);
+      return isFuture ? `in ${hours} hour${hours !== 1 ? 's' : ''}` : `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    } else if (absSeconds < 2592000) { // 30 days
+      const days = Math.floor(absSeconds / 86400);
+      return isFuture ? `in ${days} day${days !== 1 ? 's' : ''}` : `${days} day${days !== 1 ? 's' : ''} ago`;
+    } else if (absSeconds < 31536000) { // 365 days
+      const months = Math.floor(absSeconds / 2592000);
+      return isFuture ? `in ${months} month${months !== 1 ? 's' : ''}` : `${months} month${months !== 1 ? 's' : ''} ago`;
+    } else {
+      const years = Math.floor(absSeconds / 31536000);
+      return isFuture ? `in ${years} year${years !== 1 ? 's' : ''}` : `${years} year${years !== 1 ? 's' : ''} ago`;
+    }
+  }
 
   return (
     <div className="space-y-10">
@@ -49,6 +97,7 @@ export default function TimestampConverterTool() {
       <div className="space-y-4">
         <h3 className="font-medium">Unix Timestamp → Date</h3>
         <Input
+          id="timestamp-input"
           type="text"
           placeholder="Enter Unix timestamp (e.g., 1700000000 or 1700000000000)"
           value={timestamp}
@@ -57,9 +106,19 @@ export default function TimestampConverterTool() {
 
         {timestampResult && (
           <div className="rounded-xl bg-muted/50 p-4 space-y-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Current Unix Time</p>
+              <p className="font-mono text-lg">{timestampResult.unixSeconds}</p>
+              {timestampResult.relativeTime && (
+                <p className="text-xs text-muted-foreground mt-1">({timestampResult.relativeTime})</p>
+              )}
+            </div>
+
             {[
               { label: "UTC", value: timestampResult.utc },
-              { label: "Local", value: timestampResult.local },
+              { label: "IST (India)", value: timestampResult.ist },
+              { label: "US/Eastern", value: timestampResult.eastern },
+              { label: "US/Pacific", value: timestampResult.pacific },
               { label: "ISO 8601", value: timestampResult.iso },
               { label: "Unix (seconds)", value: timestampResult.unixSeconds.toLocaleString() },
               { label: "Unix (milliseconds)", value: timestampResult.unixMs.toLocaleString() },

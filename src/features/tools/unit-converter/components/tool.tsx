@@ -90,7 +90,11 @@ export default function UnitConverterTool() {
     setToUnit(fromUnit);
   };
 
-  return (
+  const formatNumber = (num: number) => {
+  return num.toLocaleString();
+};
+
+return (
     <div className="space-y-6">
       <Select value={category} onValueChange={(v) => {
         if (!v) return;
@@ -138,7 +142,7 @@ export default function UnitConverterTool() {
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground">To</label>
           <div className="flex items-center h-10 px-3 rounded-lg border bg-muted/30 text-base font-mono">
-            {result !== null ? result.toLocaleString(undefined, { maximumFractionDigits: 10 }) : "—"}
+            {result !== null ? formatNumber(result) : "—"}
           </div>
           <Select value={toUnit} onValueChange={(v) => v && setToUnit(v)}>
             <SelectTrigger>
